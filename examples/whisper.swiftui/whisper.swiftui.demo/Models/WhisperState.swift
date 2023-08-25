@@ -15,7 +15,7 @@ class WhisperState: NSObject, ObservableObject, AVAudioRecorderDelegate {
     private var audioPlayer: AVAudioPlayer?
     
     private var modelUrl: URL? {
-        Bundle.main.url(forResource: "ggml-tiny.en", withExtension: "bin", subdirectory: "models")
+        Bundle.main.url(forResource: "ggml-medium", withExtension: "bin", subdirectory: "models")
     }
     
     private var sampleUrl: URL? {
@@ -56,12 +56,7 @@ class WhisperState: NSObject, ObservableObject, AVAudioRecorderDelegate {
     }
     
     private func transcribeAudio(_ url: URL) async {
-        if (!canTranscribe) {
-            return
-        }
-        guard let whisperContext else {
-            return
-        }
+        guard let whisperContext, canTranscribe else {  return }
         
         do {
             canTranscribe = false
@@ -94,20 +89,19 @@ class WhisperState: NSObject, ObservableObject, AVAudioRecorderDelegate {
             }
         } else {
             requestRecordPermission { granted in
-                if granted {
-                    Task {
-                        do {
-                            self.stopPlayback()
-                            let file = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-                                .appending(path: "output.wav")
-                            try await self.recorder.startRecording(toOutputFile: file, delegate: self)
-                            self.isRecording = true
-                            self.recordedFile = file
-                        } catch {
-                            print(error.localizedDescription)
-                            self.messageLog += "\(error.localizedDescription)\n"
-                            self.isRecording = false
-                        }
+                guard granted else { return }
+                Task {
+                    do {
+                        self.stopPlayback()
+                        let file = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+                            .appending(path: "output.wav")
+                        try await self.recorder.startRecording(toOutputFile: file, delegate: self)
+                        self.isRecording = true
+                        self.recordedFile = file
+                    } catch {
+                        print(error.localizedDescription)
+                        self.messageLog += "\(error.localizedDescription)\n"
+                        self.isRecording = false
                     }
                 }
             }
